@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account - JEE Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            margin: 2rem auto;
+        }
+        .btn {
+            background-color: #4a5568;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            color: #e2e8f0;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 class="text-2xl font-bold mb-4">Manage Account</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="text-green-500 mb-4">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+        <form action="{{ url_for('account') }}" method="POST">
+            <input type="email" name="email" placeholder="Email" value="{{ user.email }}" class="bg-gray-700 text-white p-2 rounded mb-2 w-full">
+            <input type="password" name="password" placeholder="New Password (leave blank to keep unchanged)" class="bg-gray-700 text-white p-2 rounded mb-2 w-full">
+            <button type="submit" class="btn w-full">Update</button>
+        </form>
+        <a href="{{ url_for('index') }}" class="btn mt-4 w-full">Back to Home</a>
+    </div>
+</body>
+</html>

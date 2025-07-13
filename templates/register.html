@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - JEE Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .card {
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+        .btn {
+            background-color: #4a5568;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            color: #e2e8f0;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 class="text-2xl font-bold mb-4">Register</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="text-red-500 mb-4">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+        <form action="{{ url_for('register') }}" method="POST">
+            <input type="text" name="username" placeholder="Username" class="bg-gray-700 text-white p-2 rounded mb-2 w-full">
+            <input type="email" name="email" placeholder="Email" class="bg-gray-700 text-white p-2 rounded mb-2 w-full">
+            <input type="password" name="password" placeholder="Password" class="bg-gray-700 text-white p-2 rounded mb-2 w-full">
+            <button type="submit" class="btn w-full">Register</button>
+        </form>
+        <p class="mt-4">Already have an account? <a href="{{ url_for('login') }}" class="text-blue-400">Login</a></p>
+    </div>
+</body>
+</html>

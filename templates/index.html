@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEE Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="https://img.icons8.com/?size=100&id=42763&format=png&color=000000">
+
+    <style>
+        body {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .card {
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            background-color: #4a5568;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            color: #e2e8f0;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #718096;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #2d3748;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mx-auto p-4">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-3xl font-bold">JEE Tracker</h1>
+
+            <!-- Desktop Buttons -->
+            <div class="hidden md:flex space-x-2">
+                <a href="{{ url_for('account') }}" class="btn">Account</a>
+                <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+            </div>
+
+            <!-- Mobile Dropdown -->
+            <div class="relative md:hidden">
+                <button id="menu-btn" class="btn">☰</button>
+                <div id="dropdown" class="absolute right-0 mt-2 w-32 bg-gray border rounded shadow-lg hidden">
+                    <a href="{{ url_for('account') }}" class="block px-4 py-2 hover:bg-gray-100">Account</a>
+                    <a href="{{ url_for('logout') }}" class="block px-4 py-2 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Homework Section -->
+    <div class="card">
+        <h2 class="text-2xl font-semibold mb-4">Today's Homework</h2>
+        {% for homework in homeworks %}
+        <div class="mb-4">
+            <h3 class="text-xl">{{ homework.title }}</h3>
+            <p>{{ homework.description }}</p>
+            <input type="checkbox" id="hw-{{ homework._id }}" {% if user._id in homework.completed_by %}checked{% endif
+                %} onchange="completeHomework('{{ homework._id }}')">
+            <label for="hw-{{ homework._id }}">Completed</label>
+            <p>Completed by: <a href="#" onclick="shown('{{ homework._id }}')">{{ homework.completed_by|length
+                    }} users</a>
+            </p>
+        </div>
+        {% endfor %}
+        <a href="{{ url_for('past_homework') }}" class="btn">View Past Homework</a>
+        <button class="btn mt-2" onclick="showAddHomeworkModal()">Add Homework</button>
+    </div>
+
+    <!-- Syllabus Section -->
+    <div class="card">
+        <h2 class="text-2xl font-semibold mb-4">Syllabus Tracker</h2>
+        {% for target in syllabus|groupby('target') %}
+        <h3 class="text-xl mt-4">{{ target.grouper }}</h3>
+        <ul class="ml-4 space-y-2">
+            {% for item in target.list %}
+            {% set completion = item.completed_by | selectattr("user_id", "equalto", user._id) | list %}
+            <li class="flex items-center space-x-2">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; flex-direction: row; justify-content: space-between; ">
+                        <span>{{ loop.index }}.</span>
+                        <span class="flex-1">{{ item.topic }}</span>
+                        <input type="checkbox" onchange="updateSyllabus('{{ item._id }}')" {% if completion %}checked{%
+                            endif %}>
+                    </div>
+
+                    <div>
+                        <span class="text-sm text-gray-500 ml-2">
+                            Completed by: {{ item.completed_by | length }} users
+                        </span>
+                    </div>
+
+                </div>
+
+            </li>
+            {% endfor %}
+        </ul>
+        {% endfor %}
+        <button class="btn mt-4" onclick="showAddSyllabusModal()">Add Syllabus</button>
+    </div>
+
+
+
+
+    <!-- Backlog Section -->
+    <div class="card">
+        <h2 class="text-2xl font-semibold mb-4">Backlog</h2>
+        <ul>
+            {% for item in backlog %}
+            <li class="flex items-center space-x-3 mb-1">
+                <input type="checkbox" onchange="completeBacklog('{{ item._id }}')">
+                <span>{{ item.topic }} - Added on {{ item.created_at.strftime('%Y-%m-%d') }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <form action="{{ url_for('add_backlog') }}" method="POST" class="mt-2" onsubmit="return validateBacklogForm()">
+            <input type="text" name="topic" id="backlog-topic" placeholder="Add backlog topic"
+                class="bg-gray-700 text-white p-2 rounded">
+            <button type="submit" class="btn">Add</button>
+        </form>
+    </div>
+
+
+
+
+
+
+    <!-- Revision Section -->
+    <div class="card">
+        <h2 class="text-2xl font-semibold mb-4">Revision Schedule</h2>
+        <ul>
+            {% for revision in revisions %}
+            <li class="flex items-center space-x-3 mb-2">
+                <input type="checkbox"
+       id="rev-{{ revision.uid }}"
+       name="rev-{{ revision.uid }}"
+       onchange="completeRevision('{{ revision._id }}', '{{ revision.date }}')">
+
+
+                <div>
+                    <h3 class="text-lg">{{ revision.topic }}</h3>
+                    <p class="text-sm text-gray-500">Scheduled for: {{ revision.date }}</p>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+
+
+        <button id="buton" onclick="openRevisionModal()" class="btn mt-4 bg-green-500 text-white">+ Add
+            Revision</button>
+
+    </div>
+
+    <!-- Revision Modal -->
+    <div id="revisionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-700 rounded-lg p-6 w-96 relative">
+            <h3 class="text-xl font-bold mb-4">Add Revision</h3>
+
+            <form id="revisionForm">
+                <input type="text" name="topic" id="revision-topic" placeholder="Topic" style="background-color: #718096;"
+                    class="w-full border px-3 py-2 rounded mb-3" required>
+
+                <div id="dateFields">
+                    <input type="date" style="background-color: #718096;" name="dates" class="w-full border px-3 py-2 rounded mb-2" required>
+                </div>
+
+                <button type="button" style="color: white;" onclick="addDateField()" class="text-sm text-blue-600 mb-3">+ Add another
+                    date</button>
+
+                <div class="flex justify-between">
+                    <button type="button" class="btn text-red-500" onclick="closeRevisionModal()">Cancel</button>
+                    <button type="button" onclick="add_revisions()"
+                        class="btn bg-blue-500 text-white px-4 py-2 rounded">Add Revision</button>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+
+   
+
+    <!-- Time Tracking Section -->
+    <div class="card">
+        <h2 class="text-2xl font-semibold mb-4">Time Tracking</h2>
+        <form action="{{ url_for('add_time_log') }}" method="POST" class="mb-4">
+            <input type="number" name="hours" placeholder="Hours studied" step="0.1"
+                class="bg-gray-700 text-white p-2 rounded">
+            
+            <button type="submit" class="btn">Log Time</button>
+        </form>
+        <a href="{{ url_for('leaderboard') }}" class="btn">View Leaderboard</a>
+    </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="completedByModal" style="background-color: #4a556800;"
+        class="fixed inset-0 z-50 flex items-center justify-center  hidden">
+        <div class="rounded-lg p-6 w-80 shadow-lg" style="background-color: #374763;">
+            <h3 class="text-xl font-bold mb-4">Completed By</h3>
+            <ul id="completedByList" class="list-disc list-inside text-white-800"></ul>
+            <button class="btn mt-4" style="background-color: #4a5568;" onclick="closeCompletedByModal()">Close</button>
+        </div>
+    </div>
+    <div id="addHomeworkModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl mb-4">Add Homework</h2>
+            <form action="{{ url_for('add_homework') }}" method="POST">
+                <input type="text" name="admin_code" placeholder="Admin Code"
+                    class="bg-gray-700 text-white p-2 rounded mb-2" style="width: 100%;">
+
+                <input type="text" name="title" placeholder="Homework Title"
+                    class="bg-gray-700 text-white p-2 rounded mb-2" style="width: 100%;">
+                <textarea name="description" placeholder="Description" class="bg-gray-700 text-white p-2 rounded mb-2"
+                    style="width: 100%;"></textarea>
+                <div style="display: flex; gap: 5px; flex-direction: row; justify-content: right;">
+                    <input type="date" name="date" class="bg-gray-700 text-white p-2 rounded mb-2" value="{{date}}">
+                </div>
+
+
+                <div style="display: flex; gap: 5px; flex-direction: row; justify-content: right;">
+                    <button type="button" class="btn" onclick="closeModal('addHomeworkModal')">Cancel</button>
+                    <button type="submit" class="btn">Add</button>
+                </div>
+
+
+
+            </form>
+        </div>
+    </div>
+
+    <div id="addSyllabusModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl mb-4">Add Syllabus</h2>
+            <form action="{{ url_for('add_syllabus') }}" method="POST">
+                <div>
+                    <input type="text" style="width: 100%;" name="admin_code" placeholder="Admin Code"
+                        class="bg-gray-700 text-white p-2 rounded mb-2">
+                    <input style="width: 100%;" type="text" name="topic" placeholder="Topic"
+                        class="bg-gray-700 text-white p-2 rounded mb-2">
+                    <input style="width: 100%;" type="text" name="target" placeholder="Target (e.g., Physics)"
+                        class="bg-gray-700 text-white p-2 rounded mb-2">
+                    <div style="display: flex; justify-content: right; gap: 5px;">
+                        <button type="button" class="btn" onclick="closeModal('addSyllabusModal')">Cancel</button>
+                        <button type="submit" class="btn">Add</button>
+
+                    </div>
+
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function shown(homeworkId) {
+            const response = await fetch(`/completed_by/${homeworkId}`);
+            if (response.ok) {
+                const usernames = await response.json();
+                const list = document.getElementById('completedByList');
+                list.innerHTML = '';
+                usernames.forEach(name => {
+                    const li = document.createElement('li');
+                    li.textContent = name;
+                    list.appendChild(li);
+
+                });
+                document.getElementById('completedByModal').classList.remove('hidden');
+
+            } else {
+                alert("Failed to load user list.");
+            }
+
+
+        }
+
+        function closeCompletedByModal() {
+            document.getElementById('completedByModal').classList.add('hidden');
+        }
+
+
+        function showAddHomeworkModal() {
+            document.getElementById('addHomeworkModal').style.display = 'flex';
+        }
+
+        function showAddSyllabusModal() {
+            document.getElementById('addSyllabusModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        async function completeHomework(homeworkId) {
+            const response = await fetch(`/complete_homework/${homeworkId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (response.ok) {
+                location.reload();
+            }
+        }
+
+        async function showCompletedBy(homeworkId) {
+            const response = await fetch(`/homework/${homeworkId}/completed_by`);
+            const data = await response.json();
+            alert('Completed by: ' + data.completed_by.join(', '));
+        }
+
+        // Auto-login check
+        const savedUsername = localStorage.getItem('username');
+        const savedPassword = localStorage.getItem('password');
+        if (savedUsername && savedPassword && !'{{ session.username }}') {
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `username=${savedUsername}&password=${savedPassword}`
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '/';
+                }
+            });
+        }
+        const menuBtn = document.getElementById("menu-btn");
+        const dropdown = document.getElementById("dropdown");
+
+        menuBtn.addEventListener("click", () => {
+            console.log('click')
+            dropdown.classList.toggle("hidden");
+        });
+
+        // Optional: Close menu when clicking outside
+        document.addEventListener("click", (e) => {
+
+            if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add("hidden");
+            }
+        });
+
+        // Save credentials on login
+        document.querySelector('form[action="/login"]').addEventListener('submit', () => {
+
+            const username = document.querySelector('input[name="username"]').value;
+            const password = document.querySelector('input[name="password"]').value;
+            localStorage.setItem('username', username);
+            localStorage.setItem('password', password);
+        });
+
+        async function completeBacklog(backlogId) {
+            const res = await fetch(`/complete_backlog/${backlogId}`, { method: 'POST' });
+            if (res.ok) location.reload();
+            else alert("Failed to complete backlog.");
+        }
+
+        function validateBacklogForm() {
+            const topic = document.getElementById("backlog-topic").value.trim();
+            if (topic === "") {
+                alert("Please enter a backlog topic.");
+                return false;
+            }
+            return true;
+        }
+
+        async function completeRevision(revisionId, revisionDate) {
+            const res = await fetch(`/complete_revision/${revisionId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ date: revisionDate })
+            });
+            if (res.ok) location.reload();
+            else alert("Failed to mark revision complete.");
+        }
+        function validateRevisionForm() {
+            const topic = document.getElementById("rev-topic").value.trim();
+            const dates = document.getElementById("rev-dates").value;
+            if (!topic || !dates) {
+                alert("Please enter topic and at least one date.");
+                return false;
+            }
+            return true;
+        }
+
+        function openRevisionModal() {
+            document.getElementById('revisionModal').classList.remove('hidden');
+        }
+        function closeRevisionModal() {
+            document.getElementById('revisionModal').classList.add('hidden');
+            document.getElementById('revisionForm').reset();
+            document.getElementById('dateFields').innerHTML = '<input type="date" name="dates" class="w-full border px-3 py-2 rounded mb-2" required>';
+        }
+
+        function addDateField() {
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.name = 'dates';
+            dateInput.className = 'w-full border px-3 py-2 rounded mb-2';
+            dateInput.style="background-color: #718096;"
+            document.getElementById('dateFields').appendChild(dateInput);
+        }
+
+
+
+
+        
+        async function add_revisions() {
+            const formEl = document.getElementById('revisionForm');
+            const formData = new FormData(formEl);  // ✅ Fix here
+
+            const topic = formData.get('topic');
+            const dates = formData.getAll('dates').filter(date => date);  // ✅ Safe filtering
+
+            if (!topic || dates.length === 0) {
+                alert("Please enter a topic and at least one date.");
+                return;
+            }
+
+            const res = await fetch('/add_revision_modal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic, dates })
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert("Failed to add revision.");
+            }
+        }
+
+
+
+        async function updateSyllabus(syllabusId) {
+            const checkbox = event.target;
+
+
+            const res = await fetch(`/update_syllabus/${syllabusId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    completed: checkbox.checked,
+                })
+
+
+            });
+
+            if (!res.ok) {
+                alert("Failed to update syllabus.");
+            } else {
+                location.reload();
+            }
+        }
+    </script>
+</body>
+
+</html>
