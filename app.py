@@ -2,8 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from flask_pymongo import PyMongo
 from bcrypt import hashpw, checkpw, gensalt
 from datetime import datetime
-import smtplib
-from email.mime.text import MIMEText
+
 import uuid
 import os
 from bson import ObjectId
